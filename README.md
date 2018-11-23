@@ -14,7 +14,7 @@ everything's in place:
 
 ```
 $ zef --force-test install Terminal::Print
-$ zef install https://github.com/clarkema/bingewatch
+$ zef install https://github.com/clarkema/bingewatch.git
 ```
 
 (Note that `Terminal::Print` has issues with its test harness that mean that
