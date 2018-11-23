@@ -1,0 +1,26 @@
+{
+  "name" : "App::bingewatch",
+  "license" : "GPL-3.0",
+  "source-url" : "git://github.com/clarkema/bingewatch.git",
+  "auth" : "github:clarkema",
+  "authors" : [ "Mike Clarke" ],
+
+  "description" : "Fetch recent videos from YouTube channels for offline viewing",
+  "tags" : [ "YouTube" ],
+  "version" : "0.1.0",
+
+  "perl" : "6.c",
+  "resources" : [ ],
+  "build-depends" : [ ],
+  "depends" : [
+    "WWW",
+    "Terminal::Print",
+    "XML::XPath"
+  ],
+  "test-depends" : [
+    "Test::META"
+  ],
+  "provides" : {
+      "App::bingewatch": "bin/bingewatch"
+  }
+}

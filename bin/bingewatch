@@ -1,0 +1,115 @@
+#! /usr/bin/env perl6
+
+# Copyright (C) 2018 Michael Clarke
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License Version 3, as
+# published by the Free Software Foundation.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use WWW;
+use XML::XPath;
+use Terminal::Print;
+
+my $screen = Terminal::Print.new;
+
+multi MAIN (Str:D $channel) {
+    binge @$channel;
+}
+multi MAIN {
+    binge $*HOME.add(".config/bingewatch/channels.txt").slurp.lines.map(*.lc);
+}
+
+sub binge (@channels-list) {
+    $screen.initialize-screen;
+    my $progress-chan = start-progress-monitor;
+
+    for @channels-list -> $channel {
+        my $feed = "https://www.youtube.com/feeds/videos.xml?user=$channel";
+        mkdir $channel;
+        indir $channel, {
+            process-feed $feed, $progress-chan;
+        }
+    }
+
+    $screen.shutdown-screen;
+}
+
+sub start-progress-monitor {
+    my $chan = Channel.new;
+    my $id-width = 15;
+    my %rows;
+    my $rowmax = 2; # Gives space for channel url in first row
+
+    start {
+        react {
+            whenever $chan -> $msg {
+                given $msg {
+                    when :("NEWFEED", Str) {
+                        Terminal::Print.clear-screen;
+                        $screen.print-string(0, 0, $msg[1]);
+                    }
+                    when :(Str, Str) {
+                        my $id = $msg[0];
+                        my $padding = $screen.columns - $id-width;
+                        my $status = sprintf("%-{$id-width}s%-{$padding}s", $id, $msg[1]);
+
+                        %rows{$id} = $rowmax++ unless %rows{$id}:exists;
+                        my $row = %rows{$id};
+
+                        $screen.print-string(0, $row, $status);
+                    }
+                }
+            }
+        }
+    }
+
+    return $chan;
+}
+
+sub process-feed(Str:D $url, Channel:D $progress-chan) {
+    $progress-chan.send: ("NEWFEED", $url);
+
+    my $feed = get $url or snuff "Error fetching $url: " ~ $feed.exception;
+
+    my $xpath = XML::XPath.new(xml => $feed);
+    $xpath.set-namespace("media" => "http://search.yahoo.com/mrss/");
+
+    await $xpath.find('//media:content/@url', :to-list).map: -> $url {
+        download $url.split('?').first, $progress-chan;
+    }
+}
+
+sub download(Str:D $url, Channel:D $progress-chan) {
+    my $id = $url.split('/').reverse.first;
+
+    # We already have the file
+    return Promise.kept if dir().grep(/$id/);
+
+    my $proc = Proc::Async.new: "youtube-dl", "--newline", $url;
+    $proc.stdout.lines.tap: { $progress-chan.send: ($id, $_) }
+    $proc.stderr.lines.tap: { $progress-chan.send: ($id, $_) }
+
+    my $promise = $proc.start;
+    $promise.Supply.tap(
+        {;}, # We don't care about the main tap; only when we're done
+        done => { $progress-chan.send: ($id, "Done.") },
+        quit => { $progress-chan.send: ($id, "Failed.") }
+    );
+
+    return $promise;
+}
+
+# Like die, but clean up the terminal before expiring.
+sub snuff (Str $e) {
+    $screen.shutdown-screen;
+    $*ERR.say: $e;
+    exit 1;
+}
