@@ -44,12 +44,25 @@ sub binge (@channels-list) {
 
 sub start-progress-monitor {
     my $chan = Channel.new;
+    my $tick = Supply.interval: 1;
     my $id-width = 15;
-    my %rows;
-    my $rowmax = 2; # Gives space for channel url in first row
+    my %latest;
 
     start {
         react {
+            whenever $tick {
+                my $row = 2; # Gives space for channel url in first row
+
+                for %latest.kv -> $id, $msg {
+                    my $msg-width = $screen.columns - $id-width;
+
+                    $screen.print-string(0, $row,
+                        sprintf("%-{$id-width}s%-{$msg-width}.{$msg-width}s", $id, $msg)
+                    );
+
+                    $row++;
+                }
+            }
             whenever $chan -> $msg {
                 given $msg {
                     when :("NEWFEED", Str) {
@@ -57,14 +70,7 @@ sub start-progress-monitor {
                         $screen.print-string(0, 0, $msg[1]);
                     }
                     when :(Str, Str) {
-                        my $id = $msg[0];
-                        my $padding = $screen.columns - $id-width;
-                        my $status = sprintf("%-{$id-width}s%-{$padding}s", $id, $msg[1]);
-
-                        %rows{$id} = $rowmax++ unless %rows{$id}:exists;
-                        my $row = %rows{$id};
-
-                        $screen.print-string(0, $row, $status);
+                        %latest{$msg[0]} = $msg[1];
                     }
                 }
             }
