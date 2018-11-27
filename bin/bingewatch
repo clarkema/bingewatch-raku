@@ -97,9 +97,10 @@ sub download(Str:D $url, Channel:D $progress-chan) {
     my $id = $url.split('/').reverse.first;
 
     # We already have the file
-    return Promise.kept if dir().grep(/$id/);
+    return Promise.kept if dir().grep(/__$id\./);
 
-    my $proc = Proc::Async.new: "youtube-dl", "--newline", $url;
+    my $proc = Proc::Async.new("youtube-dl", "--newline", "--restrict-filenames",
+        "-o", '%(upload_date)s-%(title)s__%(id)s.%(ext)s', $url);
     $proc.stdout.lines.tap: { $progress-chan.send: ($id, $_) }
     $proc.stderr.lines.tap: { $progress-chan.send: ($id, $_) }
 
