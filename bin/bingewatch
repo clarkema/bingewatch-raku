@@ -66,6 +66,7 @@ sub start-progress-monitor {
             whenever $chan -> $msg {
                 given $msg {
                     when :("NEWFEED", Str) {
+                        %latest := {};
                         Terminal::Print.clear-screen;
                         $screen.print-string(0, 0, $msg[1]);
                     }
