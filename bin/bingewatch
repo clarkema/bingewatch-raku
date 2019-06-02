@@ -1,6 +1,6 @@
 #! /usr/bin/env perl6
 
-# Copyright (C) 2018 Michael Clarke
+# Copyright (C) 2018, 2019 Michael Clarke
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License Version 3, as
@@ -91,6 +91,10 @@ sub process-feed(Str:D $url, Channel:D $progress-chan) {
 
     await $xpath.find('//media:content/@url', :to-list).map: -> $url {
         download $url.split('?').first, $progress-chan;
+    }
+
+    CATCH {
+        snuff "Failed to start youtube-dl process: $_";
     }
 }
 
