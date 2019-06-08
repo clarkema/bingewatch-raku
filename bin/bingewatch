@@ -24,7 +24,7 @@ multi MAIN (Str:D $channel) {
     binge @$channel;
 }
 multi MAIN {
-    binge $*HOME.add(".config/bingewatch/channels.txt").slurp.lines.map(*.lc);
+    binge $*HOME.add(".config/bingewatch/channels.txt").slurp.lines;
 }
 
 sub binge (@channels-list) {
@@ -32,10 +32,26 @@ sub binge (@channels-list) {
     my $progress-chan = start-progress-monitor;
 
     for @channels-list -> $channel {
-        my $feed = "https://www.youtube.com/feeds/videos.xml?user=$channel";
-        mkdir $channel;
-        indir $channel, {
-            process-feed $feed, $progress-chan;
+        my $feed;
+        my $name;
+
+        given $channel {
+            when m/^\h*\#/ {
+                # Skip comment lines
+                next;
+            }
+            when m/^(\w+) \h+ (<[\w\-]>+)/ {
+                $name  = $0.lc;
+                $feed = "https://www.youtube.com/feeds/videos.xml?channel_id=$1";
+            }
+            default {
+                $name = $_.lc;
+                $feed = "https://www.youtube.com/feeds/videos.xml?user=$_";
+            }
+        }
+        mkdir $name;
+        indir $name, {
+            process-feed $name, $feed, $progress-chan;
         }
     }
 
@@ -81,8 +97,8 @@ sub start-progress-monitor {
     return $chan;
 }
 
-sub process-feed(Str:D $url, Channel:D $progress-chan) {
-    $progress-chan.send: ("NEWFEED", $url);
+sub process-feed(Str:D $name, Str:D $url, Channel:D $progress-chan) {
+    $progress-chan.send: ("NEWFEED", $name);
 
     my $feed = get $url or snuff "Error fetching $url: " ~ $feed.exception;
 
