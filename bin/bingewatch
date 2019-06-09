@@ -20,6 +20,10 @@ use Terminal::Print;
 
 my $screen = Terminal::Print.new;
 
+multi MAIN(Bool :$help) {
+    run $*EXECUTABLE, '--doc', $*PROGRAM;
+}
+
 multi MAIN (Str:D $channel) {
     binge @$channel;
 }
@@ -141,3 +145,83 @@ sub snuff (Str $e) {
     $*ERR.say: $e;
     exit 1;
 }
+
+=begin pod
+
+=NAME bingewatch - bulk download videos for offline viewing
+
+=begin Synopsis
+
+B<bingewatch> [U<USER>]
+
+B<bingewatch> [U<--help>]
+
+=end Synopsis
+
+=begin Description
+
+bingewatch allows bulk-downloading videos from YouTube in parallel,
+so you can easily synchronise videos from specific users or channels
+to watch later when you might have poor or no connectivity.
+
+=end Description
+
+=begin Options
+
+=defn --help
+Show this help
+
+=end Options
+
+=begin Configuration
+
+If no arguments are specified and F<$HOME/.config/bingewatch/channels.txt>
+exists, bingewatch will read that file and treat each line as a user
+or channel to synchronise.
+
+Any line where the first non-whitespace character is '#' is treated as a
+comment and ignored.
+
+There are two types of non-comment line:
+
+=begin item 
+A line containing only a single word is treated as a YouTube I<user>.
+
+For example:
+
+=begin code
+ClojureTV
+=end code
+=end item
+
+=begin item
+A line containing two words is treated as a I<channel>.
+
+The first word is a friendly name that will be used to identify the channel in
+bingewatch's interface and to name the directory in which downloaded videos
+will be stored.
+
+The second word is YouTube's channel ID.
+
+For example: 
+
+=begin code
+3brown1blue  UCYO_jab_esuFRV4b17AJtAw
+=end code
+=end item
+
+=end Configuration
+
+=begin Homepage
+
+L<https://github.com/clarkema/bingewatch>
+
+Please report bugs and feature requests in the issue tracker.
+
+=end Homepage
+
+=AUTHOR
+
+Mike Clarke <clarkema@clarkema.org>
+
+=end pod
