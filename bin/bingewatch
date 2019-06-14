@@ -20,7 +20,7 @@ use Terminal::Print;
 
 my $screen = Terminal::Print.new;
 
-multi MAIN(Bool :$help) {
+multi MAIN(Bool:D :$help) {
     run $*EXECUTABLE, '--doc', $*PROGRAM;
 }
 
